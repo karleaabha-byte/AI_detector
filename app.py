@@ -10,19 +10,26 @@ model = load_model("my_model.h5")
 IMG_SIZE = (32, 32)  # Model input size
 
 # ------------------------
-# Preprocess image
+# Preprocess image safely
 # ------------------------
 def preprocess(img):
-    # Resize image to 32x32
-    img = img.resize(IMG_SIZE)
+    # Ensure RGB
+    img = img.convert("RGB")
+    
+    # Resize while maintaining aspect ratio
+    img.thumbnail(IMG_SIZE, Image.ANTIALIAS)
+    
+    # Create new 32x32 black background and paste resized image in center
+    new_img = Image.new("RGB", IMG_SIZE, (0, 0, 0))
+    x_offset = (IMG_SIZE[0] - img.size[0]) // 2
+    y_offset = (IMG_SIZE[1] - img.size[1]) // 2
+    new_img.paste(img, (x_offset, y_offset))
+    
     # Convert to numpy array and normalize
-    img = np.array(img) / 255.0
-    # Ensure it has 3 channels
-    if img.shape[-1] != 3:
-        img = np.stack((img,) * 3, axis=-1)
+    img_array = np.array(new_img) / 255.0
     # Add batch dimension
-    img = np.expand_dims(img, axis=0)
-    return img
+    img_array = np.expand_dims(img_array, axis=0)
+    return img_array
 
 # ------------------------
 # Streamlit UI
@@ -32,16 +39,18 @@ st.title("AI vs Real Image Detector")
 uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
-    img = Image.open(uploaded_file).convert("RGB")
+    img = Image.open(uploaded_file)
     st.image(img, caption="Uploaded Image", use_container_width=True)
 
-    # Resize and preprocess
+    # Preprocess image
     img_input = preprocess(img)
 
     # Predict
     prediction = float(model.predict(img_input)[0][0])
 
-    if prediction > 0.5:
+    # Optional: adjust threshold if needed
+    threshold = 0.5
+    if prediction > threshold:
         label = "REAL IMAGE"
         confidence = prediction
     else:
