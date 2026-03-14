@@ -1,7 +1,12 @@
 streamlit
-tensorflow==2.16.2
-numpy==1.26.4
+tensorflow
+numpy
 pillow
 pandas
 scikit-learn
 opencv-python-headless
+streamlit
+rich
+pygments
+markdown-it-py
+mdurl
