@@ -1,22 +1,20 @@
 import streamlit as st
 import numpy as np
 from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
 from PIL import Image
 
 # ------------------------
 # Load model
 # ------------------------
 model = load_model("my_model.h5")
-
-IMG_SIZE = (32,32)
+IMG_SIZE = (32, 32)
 
 # ------------------------
 # Preprocess image
 # ------------------------
 def preprocess(img):
     img = img.resize(IMG_SIZE)
-    img = np.array(img)/255.0
+    img = np.array(img) / 255.0
     img = np.expand_dims(img, axis=0)
     return img
 
@@ -25,13 +23,12 @@ def preprocess(img):
 # ------------------------
 st.title("AI vs Real Image Detector")
 
-uploaded_file = st.file_uploader("Upload an Image", type=["jpg","png","jpeg"])
+uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
-
-    img = Image.open(uploaded_file)
-
-    st.image(img, caption="Uploaded Image", use_column_width=True)
+    img = Image.open(uploaded_file).convert("RGB")
+    
+    st.image(img, caption="Uploaded Image", use_container_width=True)
 
     img_input = preprocess(img)
 
@@ -42,5 +39,7 @@ if uploaded_file is not None:
     else:
         label = "AI GENERATED"
 
+    confidence = prediction if label == "REAL IMAGE" else 1 - prediction
+
     st.subheader(f"Prediction: {label}")
-    st.write(f"Confidence Score: {prediction:.4f}")
+    st.write(f"Confidence Score: {confidence:.4f}")
