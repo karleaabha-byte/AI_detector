@@ -17,8 +17,7 @@ def preprocess(img):
     img = img.convert("RGB")
     
     # Resize while maintaining aspect ratio
-    img.thumbnail(IMG_SIZE, Image.ANTIALIAS)
-    
+    img.thumbnail(IMG_SIZE, Image.Resampling.LANCZOS)    
     # Create new 32x32 black background and paste resized image in center
     new_img = Image.new("RGB", IMG_SIZE, (0, 0, 0))
     x_offset = (IMG_SIZE[0] - img.size[0]) // 2
