@@ -1,7 +1,7 @@
 streamlit
 tensorflow
-numpy
-pandas
+numpy==1.26.4
 pillow
+pandas
 scikit-learn
 opencv-python-headless
