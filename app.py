@@ -6,7 +6,7 @@ from PIL import Image
 # ------------------------
 # Load model
 # ------------------------
-model = load_model("C:\Users\Aabha\Downloads\my_model.h5")
+model = load_model("my_model.h5")
 IMG_SIZE = (32, 32)
 
 # ------------------------
