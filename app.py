@@ -196,24 +196,45 @@ with tab2:
     st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}} = {p_hat:.4f}")
 
     # -------- HYPOTHESIS TEST --------
-    st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
+   st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
 
-    errors = (y_true != y_pred).sum()
-    e_hat = errors / n
-    e0 = 0.5
+# counts
+n = len(y_true)
+errors = (y_true != y_pred).sum()
+correct = n - errors
 
-    z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
-    z_critical = norm.ppf(1-0.05/2)
-    p_value = 2*(1-norm.cdf(abs(z)))
+# rates
+e_hat = errors / n
+accuracy_hat = correct / n
+e0 = 0.5
 
-    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
-    st.write(f"Z = {z:.2f}")
-    st.write(f"P-value = {p_value:.6f}")
+# z test
+z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
+z_critical = norm.ppf(1-0.05/2)
+p_value = 2*(1-norm.cdf(abs(z)))
 
-    if abs(z)>z_critical:
-        st.success("Reject H0 → Model better than random")
+# display
+st.write(f"Total Samples: {n}")
+st.write(f"Correct Predictions: {correct}")
+st.write(f"Misclassified Samples: {errors}")
+
+st.write(f"Observed Error Rate (ê): {e_hat:.4f} ({e_hat*100:.2f}%)")
+st.write(f"Observed Accuracy: {accuracy_hat:.4f} ({accuracy_hat*100:.2f}%)")
+
+st.latex(r"H_0: e = 0.5 \quad vs \quad H_1: e \neq 0.5")
+st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
+
+st.write(f"Z Statistic: {z:.3f}")
+st.write(f"Z Critical: ±{z_critical:.3f}")
+st.write(f"P-value: {p_value:.6f}")
+
+if abs(z)>z_critical:
+    if z < 0:
+        st.success("Reject H0 → Model error is significantly LOWER than random guessing")
     else:
-        st.warning("Fail to reject H0")
+        st.error("Reject H0 → Model error is WORSE than random guessing")
+else:
+    st.warning("Fail to reject H0 → No significant difference")
 
     # -------- CLASS-WISE ACCURACY --------
     st.markdown("<div class='section'>Class-wise Accuracy</div>", unsafe_allow_html=True)
@@ -227,26 +248,48 @@ with tab2:
     # -------- 2-PROPORTION TEST --------
     st.markdown("<div class='section'>Misclassification Comparison Test</div>", unsafe_allow_html=True)
 
-    n_real = len(real_df)
-    n_ai = len(ai_df)
+# sizes
+n_real = len(real_df)
+n_ai = len(ai_df)
 
-    x_real = (real_df["prediction"]=="AI").sum()
-    x_ai = (ai_df["prediction"]=="REAL").sum()
+# misclassified counts
+x_real = (real_df["prediction"]=="AI").sum()   # real → AI
+x_ai = (ai_df["prediction"]=="REAL").sum()     # AI → real
 
-    p_real = x_real/n_real
-    p_ai = x_ai/n_ai
+# rates
+p_real = x_real / n_real
+p_ai = x_ai / n_ai
 
-    p_pool = (x_real+x_ai)/(n_real+n_ai)
-    SE = np.sqrt(p_pool*(1-p_pool)*(1/n_real + 1/n_ai))
+# pooled
+p_pool = (x_real + x_ai) / (n_real + n_ai)
+SE = np.sqrt(p_pool*(1-p_pool)*(1/n_real + 1/n_ai))
 
-    Z = (p_ai - p_real)/SE
-    p_val = 2*(1-norm.cdf(abs(Z)))
+Z = (p_ai - p_real)/SE
+p_val = 2*(1-norm.cdf(abs(Z)))
 
-    st.latex(r"Z = \frac{p_1 - p_2}{SE}")
-    st.write(f"Z = {Z:.3f}")
-    st.write(f"P-value = {p_val:.6f}")
+# display counts
+st.write("🔹 Real Images:")
+st.write(f"Total Real Images: {n_real}")
+st.write(f"Misclassified as AI: {x_real}")
 
-    if abs(Z) > 1.96:
-        st.success("Significant difference between AI & Real errors")
-    else:
-        st.warning("No significant difference")
+st.write("🔹 AI Images:")
+st.write(f"Total AI Images: {n_ai}")
+st.write(f"Misclassified as Real: {x_ai}")
+
+# display rates
+st.write(f"Real Misclassification Rate: {p_real:.4f} ({p_real*100:.2f}%)")
+st.write(f"AI Misclassification Rate: {p_ai:.4f} ({p_ai*100:.2f}%)")
+
+# stats
+st.latex(r"H_0: p_{real} = p_{ai}")
+st.latex(r"H_1: p_{real} \neq p_{ai}")
+st.latex(r"Z = \frac{p_{ai} - p_{real}}{SE}")
+
+st.write(f"Z Statistic: {Z:.3f}")
+st.write(f"P-value: {p_val:.6f}")
+
+# decision
+if abs(Z) > 1.96:
+    st.success("Reject H0 → Significant difference in misclassification rates")
+else:
+    st.warning("Fail to reject H0 → No significant difference")
