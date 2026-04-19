@@ -172,7 +172,7 @@ with tab2:
     st.markdown("<div class='section'>ROC Curve</div>", unsafe_allow_html=True)
 
     y_prob = df["probability"]
-    fpr, tpr, _ = roc_curve(y_true, y_prob)
+    tpr, fpr, _ = roc_curve(y_true, y_prob)
     roc_auc = auc(fpr, tpr)
 
     fig2, ax2 = plt.subplots()
