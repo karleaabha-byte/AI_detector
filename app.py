@@ -224,9 +224,64 @@ with tab2:
 
     # -------- CLASS-WISE ACCURACY --------
     st.markdown("<div class='section'>Class-wise Accuracy</div>", unsafe_allow_html=True)
-
-    real_acc = (real_df["prediction"]=="REAL").mean()
-    ai_acc = (ai_df["prediction"]=="AI").mean()
-
+    
+    real_acc = (real_df["prediction"] == "REAL").mean()
+    ai_acc = (ai_df["prediction"] == "AI").mean()
+    
     st.write(f"Real Accuracy: {real_acc*100:.2f}%")
     st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
+    
+    
+    # -------- MISCLASSIFICATION TEST --------
+    st.markdown("<div class='section'>Misclassification Comparison Test</div>", unsafe_allow_html=True)
+    
+    # sizes
+    n_real = len(real_df)
+    n_ai = len(ai_df)
+    
+    # misclassified counts
+    x_real = (real_df["prediction"] == "AI").sum()
+    x_ai = (ai_df["prediction"] == "REAL").sum()
+    
+    # rates
+    p_real = x_real / n_real
+    p_ai = x_ai / n_ai
+    
+    # pooled proportion
+    p_pool = (x_real + x_ai) / (n_real + n_ai)
+    
+    # standard error
+    SE = np.sqrt(p_pool * (1 - p_pool) * (1/n_real + 1/n_ai))
+    
+    # Z statistic
+    Z = (p_ai - p_real) / SE
+    
+    # p-value
+    p_val = 2 * (1 - norm.cdf(abs(Z)))
+    
+    # display counts
+    st.write("🔹 Real Images:")
+    st.write(f"Total Real Images: {n_real}")
+    st.write(f"Misclassified as AI: {x_real}")
+    
+    st.write("🔹 AI Images:")
+    st.write(f"Total AI Images: {n_ai}")
+    st.write(f"Misclassified as Real: {x_ai}")
+    
+    # display rates
+    st.write(f"Real Misclassification Rate: {p_real:.4f} ({p_real*100:.2f}%)")
+    st.write(f"AI Misclassification Rate: {p_ai:.4f} ({p_ai*100:.2f}%)")
+    
+    # hypothesis
+    st.latex(r"H_0: p_{real} = p_{ai}")
+    st.latex(r"H_1: p_{real} \neq p_{ai}")
+    st.latex(r"Z = \frac{p_{ai} - p_{real}}{SE}")
+    
+    # results
+    st.write(f"Z Statistic: {Z:.3f}")
+    st.write(f"P-value: {p_val:.6f}")
+    
+    if abs(Z) > 1.96:
+        st.success("Reject H0 → Significant difference in misclassification rates")
+    else:
+        st.warning("Fail to reject H0 → No significant difference")
