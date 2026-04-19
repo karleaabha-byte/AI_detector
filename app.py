@@ -123,9 +123,49 @@ with tab2:
     c6.markdown(card("Error Rate",f"{error:.4f}"),True)
 
     # -------- CONFUSION MATRIX --------
+   # =====================================================
+# TAB 2
+# =====================================================
+with tab2:
+
+    # -------- CONFUSION MATRIX VALUES (FIXED) --------
+    TP = 8568
+    FN = 1432
+    FP = 366
+    TN = 9634
+
+    total = TN + FP + FN + TP
+
+    # -------- METRICS --------
+    accuracy = (TP + TN) / total
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    f1 = 2 * precision * recall / (precision + recall)
+    specificity = TN / (TN + FP)
+    error = (FP + FN) / total
+
+    st.markdown("<div class='section'>📊 Performance Dashboard</div>", unsafe_allow_html=True)
+
+    def card(t,v):
+        return f"<div class='metric-card'><div class='metric-title'>{t}</div><div class='metric-value'>{v}</div></div>"
+
+    c1,c2,c3 = st.columns(3)
+    c4,c5,c6 = st.columns(3)
+
+    c1.markdown(card("Accuracy",f"{accuracy:.4f}"),True)
+    c2.markdown(card("Precision",f"{precision:.4f}"),True)
+    c3.markdown(card("Recall",f"{recall:.4f}"),True)
+    c4.markdown(card("F1 Score",f"{f1:.4f}"),True)
+    c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
+    c6.markdown(card("Error Rate",f"{error:.4f}"),True)
+
+    # -------- CONFUSION MATRIX --------
     st.markdown("<div class='section'>Confusion Matrix</div>", unsafe_allow_html=True)
 
-    cm = np.array([[TN, FP],[FN, TP]])
+    cm = np.array([
+        [TN, FP],
+        [FN, TP]
+    ])
 
     fig, ax = plt.subplots()
     sns.heatmap(
@@ -136,8 +176,8 @@ with tab2:
         cbar=True,
         linewidths=1,
         linecolor='white',
-        xticklabels=["REAL","AI"],
-        yticklabels=["REAL","AI"],
+        xticklabels=["Predicted Real (0)", "Predicted AI (1)"],
+        yticklabels=["Actual Real (0)", "Actual AI (1)"],
         ax=ax
     )
 
@@ -146,6 +186,8 @@ with tab2:
     ax.set_title("Confusion Matrix")
 
     st.pyplot(fig)
+
+
 
     # -------- LOAD CSV --------
     real_df = pd.read_csv("predictions_real.csv")
