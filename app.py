@@ -95,46 +95,13 @@ with tab1:
 # =====================================================
 with tab2:
 
-    # -------- CONFUSION MATRIX VALUES --------
-    TN, FP, FN, TP = 8568, 1432, 366, 9634
-    total = TN + FP + FN + TP
-
-    # -------- METRICS --------
-    accuracy = (TP + TN) / total
-    precision = TP / (TP + FP)
-    recall = TP / (TP + FN)
-    f1 = 2 * precision * recall / (precision + recall)
-    specificity = TN / (TN + FP)
-    error = (FP + FN) / total
-
-    st.markdown("<div class='section'>📊 Performance Dashboard</div>", unsafe_allow_html=True)
-
-    def card(t,v):
-        return f"<div class='metric-card'><div class='metric-title'>{t}</div><div class='metric-value'>{v}</div></div>"
-
-    c1,c2,c3 = st.columns(3)
-    c4,c5,c6 = st.columns(3)
-
-    c1.markdown(card("Accuracy",f"{accuracy:.4f}"),True)
-    c2.markdown(card("Precision",f"{precision:.4f}"),True)
-    c3.markdown(card("Recall",f"{recall:.4f}"),True)
-    c4.markdown(card("F1 Score",f"{f1:.4f}"),True)
-    c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
-    c6.markdown(card("Error Rate",f"{error:.4f}"),True)
-
-    # -------- CONFUSION MATRIX --------
-   # =====================================================
-# TAB 2
-# =====================================================
-with tab2:
-
-    # -------- CONFUSION MATRIX VALUES (FIXED) --------
+    # -------- CONFUSION MATRIX VALUES (MATCH IMAGE) --------
     TP = 8568
     FN = 1432
     FP = 366
     TN = 9634
 
-    total = TN + FP + FN + TP
+    total = TP + TN + FP + FN
 
     # -------- METRICS --------
     accuracy = (TP + TN) / total
@@ -159,12 +126,13 @@ with tab2:
     c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
     c6.markdown(card("Error Rate",f"{error:.4f}"),True)
 
-    # -------- CONFUSION MATRIX --------
+    # -------- CONFUSION MATRIX (FIXED ORIENTATION) --------
     st.markdown("<div class='section'>Confusion Matrix</div>", unsafe_allow_html=True)
 
+    # IMPORTANT: matches your image layout
     cm = np.array([
-        [TN, FP],
-        [FN, TP]
+        [TP, FN],   # Actual AI (1)
+        [FP, TN]    # Actual Real (0)
     ])
 
     fig, ax = plt.subplots()
@@ -173,21 +141,15 @@ with tab2:
         annot=True,
         fmt='d',
         cmap='Blues',
-        cbar=True,
         linewidths=1,
         linecolor='white',
-        xticklabels=["Predicted Real (0)", "Predicted AI (1)"],
-        yticklabels=["Actual Real (0)", "Actual AI (1)"],
+        xticklabels=["Predicted AI (1)", "Predicted Real (0)"],
+        yticklabels=["Actual AI (1)", "Actual Real (0)"],
         ax=ax
     )
 
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("Actual")
     ax.set_title("Confusion Matrix")
-
     st.pyplot(fig)
-
-
 
     # -------- LOAD CSV --------
     real_df = pd.read_csv("predictions_real.csv")
@@ -214,7 +176,7 @@ with tab2:
     st.markdown("<div class='section'>ROC Curve</div>", unsafe_allow_html=True)
 
     y_prob = df["probability"]
-    tpr, fpr, _ = roc_curve(y_true, y_prob)
+    fpr, tpr, _ = roc_curve(y_true, y_prob)
     roc_auc = auc(fpr, tpr)
 
     fig2, ax2 = plt.subplots()
@@ -234,56 +196,31 @@ with tab2:
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
     
-    # Step 1: Formula
     st.latex(r"\hat{p} = \frac{\text{correct predictions}}{\text{total samples}}")
-    
-    # Step 2: Substitute values
     st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}}")
-    
-    # Step 3: Final result
     st.latex(rf"\hat{{p}} = {p_hat:.4f}")
     
     st.success(f"Final MLE Accuracy = {p_hat:.4f} ({p_hat*100:.2f}%)")
-      # -------- HYPOTHESIS TEST --------
+
+    # -------- HYPOTHESIS TEST --------
     st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
 
-    # counts
-    n = len(y_true)
     errors = (y_true != y_pred).sum()
-    correct = n - errors
-
-    # rates
     e_hat = errors / n
-    accuracy_hat = correct / n
     e0 = 0.5
 
-    # z test
     z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
     z_critical = norm.ppf(1-0.05/2)
     p_value = 2*(1-norm.cdf(abs(z)))
-
-    # display
-    st.write(f"Total Samples: {n}")
-    st.write(f"Correct Predictions: {correct}")
-    st.write(f"Misclassified Samples: {errors}")
-
-    st.write(f"Observed Error Rate (ê): {e_hat:.4f} ({e_hat*100:.2f}%)")
-    st.write(f"Observed Accuracy: {accuracy_hat:.4f} ({accuracy_hat*100:.2f}%)")
-
-    st.latex(r"H_0: e = 0.5 \quad vs \quad H_1: e \neq 0.5")
-    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
 
     st.write(f"Z Statistic: {z:.3f}")
     st.write(f"Z Critical: ±{z_critical:.3f}")
     st.write(f"P-value: {p_value:.6f}")
 
     if abs(z)>z_critical:
-        if z < 0:
-            st.success("Reject H0 → Model error is significantly LOWER than random guessing")
-        else:
-            st.error("Reject H0 → Model error is WORSE than random guessing")
+        st.success("Reject H0 → Model better than random")
     else:
-        st.warning("Fail to reject H0 → No significant difference")
+        st.warning("Fail to reject H0")
 
     # -------- CLASS-WISE ACCURACY --------
     st.markdown("<div class='section'>Class-wise Accuracy</div>", unsafe_allow_html=True)
@@ -293,51 +230,3 @@ with tab2:
 
     st.write(f"Real Accuracy: {real_acc*100:.2f}%")
     st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
-
-    # -------- MISCLASSIFICATION TEST --------
-    st.markdown("<div class='section'>Misclassification Comparison Test</div>", unsafe_allow_html=True)
-
-    # sizes
-    n_real = len(real_df)
-    n_ai = len(ai_df)
-
-    # misclassified counts
-    x_real = (real_df["prediction"]=="AI").sum()
-    x_ai = (ai_df["prediction"]=="REAL").sum()
-
-    # rates
-    p_real = x_real / n_real
-    p_ai = x_ai / n_ai
-
-    # pooled
-    p_pool = (x_real + x_ai) / (n_real + n_ai)
-    SE = np.sqrt(p_pool*(1-p_pool)*(1/n_real + 1/n_ai))
-
-    Z = (p_ai - p_real)/SE
-    p_val = 2*(1-norm.cdf(abs(Z)))
-
-    # display counts
-    st.write("🔹 Real Images:")
-    st.write(f"Total Real Images: {n_real}")
-    st.write(f"Misclassified as AI: {x_real}")
-
-    st.write("🔹 AI Images:")
-    st.write(f"Total AI Images: {n_ai}")
-    st.write(f"Misclassified as Real: {x_ai}")
-
-    # display rates
-    st.write(f"Real Misclassification Rate: {p_real:.4f} ({p_real*100:.2f}%)")
-    st.write(f"AI Misclassification Rate: {p_ai:.4f} ({p_ai*100:.2f}%)")
-
-    # stats
-    st.latex(r"H_0: p_{real} = p_{ai}")
-    st.latex(r"H_1: p_{real} \neq p_{ai}")
-    st.latex(r"Z = \frac{p_{ai} - p_{real}}{SE}")
-
-    st.write(f"Z Statistic: {Z:.3f}")
-    st.write(f"P-value: {p_val:.6f}")
-
-    if abs(Z) > 1.96:
-        st.success("Reject H0 → Significant difference in misclassification rates")
-    else:
-        st.warning("Fail to reject H0 → No significant difference")
