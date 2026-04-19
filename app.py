@@ -1,15 +1,15 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from tensorflow.keras.models import load_model
 from PIL import Image
 from scipy.stats import norm
+from sklearn.metrics import classification_report, roc_curve, auc
 
-# ------------------------
-# LOAD MODEL
-# ------------------------
+# ---------------- LOAD MODEL ----------------
 @st.cache_resource
 def load_cnn():
     return load_model("my_model.h5")
@@ -17,12 +17,9 @@ def load_cnn():
 model = load_cnn()
 IMG_SIZE = (32, 32)
 
-# ------------------------
-# PREPROCESS
-# ------------------------
+# ---------------- PREPROCESS ----------------
 def preprocess_to_cifar(img):
     img = img.convert("RGB")
-
     w, h = img.size
     m = min(w, h)
     img = img.crop(((w-m)//2, (h-m)//2, (w+m)//2, (h+m)//2))
@@ -30,40 +27,26 @@ def preprocess_to_cifar(img):
 
     img = np.array(img) / 255.0
     img = np.expand_dims(img, axis=0)
-
     return img
 
-# ------------------------
-# PAGE CONFIG
-# ------------------------
-st.set_page_config(page_title="AI vs Real Detector", layout="wide")
+# ---------------- UI CONFIG ----------------
+st.set_page_config(page_title="AI Detector", layout="wide")
 
 st.markdown("""
-    <style>
-    body {
-        background-color: #0f172a;
-        color: white;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        padding: 20px;
-        border-radius: 15px;
-        text-align: center;
-        color: white;
-        box-shadow: 0px 4px 20px rgba(0,0,0,0.3);
-    }
-    .metric-title {
-        font-size: 18px;
-        opacity: 0.8;
-    }
-    .metric-value {
-        font-size: 28px;
-        font-weight: bold;
-    }
-    </style>
+<style>
+.metric-card {
+    background: linear-gradient(135deg, #00f5ff, #8b5cf6);
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    color: white;
+}
+.metric-title {font-size:16px;}
+.metric-value {font-size:26px; font-weight:bold;}
+</style>
 """, unsafe_allow_html=True)
 
-st.title("👾 AI vs Real Image Detector")
+st.markdown("<h1 style='text-align:center;'>👾 AI vs Real Image Detector</h1>", unsafe_allow_html=True)
 
 tab1, tab2 = st.tabs(["Prediction", "Model Statistics"])
 
@@ -71,42 +54,29 @@ tab1, tab2 = st.tabs(["Prediction", "Model Statistics"])
 # TAB 1
 # =====================================================
 with tab1:
+    file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
+    if file:
+        img = Image.open(file)
+        st.image(img)
 
-    uploaded_file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
+        x = preprocess_to_cifar(img)
+        pred = float(model.predict(x)[0][0])
 
-    if uploaded_file:
-        img = Image.open(uploaded_file)
+        label = "REAL IMAGE" if pred > 0.5 else "AI GENERATED"
+        conf = pred if pred > 0.5 else 1-pred
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.image(img, caption="Uploaded Image")
-
-        img_input = preprocess_to_cifar(img)
-        prediction = float(model.predict(img_input)[0][0])
-
-        if prediction > 0.5:
-            label = "REAL IMAGE"
-            confidence = prediction
-        else:
-            label = "AI GENERATED"
-            confidence = 1 - prediction
-
-        with col2:
-            st.subheader("Prediction")
-            st.metric("Result", label)
-            st.metric("Confidence", f"{confidence:.4f}")
+        st.metric("Prediction", label)
+        st.metric("Confidence", f"{conf:.4f}")
 
 # =====================================================
 # TAB 2
 # =====================================================
 with tab2:
 
-    # ---------------- CONFUSION MATRIX ----------------
+    # -------- CONFUSION MATRIX --------
     TN, FP, FN, TP = 8568, 1432, 366, 9634
     total = TN + FP + FN + TP
 
-    # ---------------- METRICS ----------------
     accuracy = (TP + TN) / total
     precision = TP / (TP + FP)
     recall = TP / (TP + FN)
@@ -114,66 +84,119 @@ with tab2:
     specificity = TN / (TN + FP)
     error = (FP + FN) / total
 
-    # ---------------- TOP DASHBOARD ----------------
-    st.markdown("## 📊 Model Performance Dashboard")
+    st.subheader("📊 Performance Dashboard")
 
-    col1, col2, col3 = st.columns(3)
-    col4, col5, col6 = st.columns(3)
+    def card(t,v):
+        return f"<div class='metric-card'><div>{t}</div><h2>{v}</h2></div>"
 
-    def card(title, value):
-        return f"""
-        <div class="metric-card">
-            <div class="metric-title">{title}</div>
-            <div class="metric-value">{value}</div>
-        </div>
-        """
+    c1,c2,c3 = st.columns(3)
+    c4,c5,c6 = st.columns(3)
 
-    col1.markdown(card("Accuracy", f"{accuracy:.4f}"), unsafe_allow_html=True)
-    col2.markdown(card("Precision", f"{precision:.4f}"), unsafe_allow_html=True)
-    col3.markdown(card("Recall", f"{recall:.4f}"), unsafe_allow_html=True)
+    c1.markdown(card("Accuracy",f"{accuracy:.4f}"),True)
+    c2.markdown(card("Precision",f"{precision:.4f}"),True)
+    c3.markdown(card("Recall",f"{recall:.4f}"),True)
+    c4.markdown(card("F1",f"{f1:.4f}"),True)
+    c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
+    c6.markdown(card("Error",f"{error:.4f}"),True)
 
-    col4.markdown(card("F1 Score", f"{f1:.4f}"), unsafe_allow_html=True)
-    col5.markdown(card("Specificity", f"{specificity:.4f}"), unsafe_allow_html=True)
-    col6.markdown(card("Error Rate", f"{error:.4f}"), unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # ---------------- CONFUSION MATRIX ----------------
+    # -------- CONFUSION MATRIX --------
     st.subheader("Confusion Matrix")
-
-    cm = np.array([[TN, FP], [FN, TP]])
-
+    cm = np.array([[TN, FP],[FN, TP]])
     fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=["REAL","AI"],
-                yticklabels=["REAL","AI"], ax=ax)
-
+    sns.heatmap(cm, annot=True, fmt='d', ax=ax)
     st.pyplot(fig)
 
-    # ---------------- MLE ----------------
-    st.subheader("Maximum Likelihood Estimation")
+    # -------- LOAD CSV --------
+    real_df = pd.read_csv("predictions_real.csv")
+    ai_df = pd.read_csv("predictions_ai.csv")
 
-    correct = TP + TN
-    p_hat = correct / total
+    real_df["true"] = 0
+    ai_df["true"] = 1
 
-    st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
-    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{total}}}")
+    df = pd.concat([real_df, ai_df])
+    df["pred"] = df["prediction"].map({"REAL":0,"AI":1})
 
-    st.success(f"MLE Accuracy = {p_hat:.4f}")
+    y_true = df["true"]
+    y_pred = df["pred"]
 
-    # ---------------- HYPOTHESIS TEST ----------------
-    st.subheader("Hypothesis Testing")
+    # -------- CLASSIFICATION REPORT --------
+    st.subheader("Classification Report")
+    st.text(classification_report(y_true,y_pred,target_names=["REAL","AI"]))
 
-    errors = FP + FN
-    e_hat = errors / total
+    # -------- ROC --------
+    st.subheader("ROC Curve")
+    y_prob = df["probability"]
+
+    fpr, tpr, _ = roc_curve(y_true, y_prob)
+    roc_auc = auc(fpr, tpr)
+
+    fig2, ax2 = plt.subplots()
+    ax2.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}")
+    ax2.plot([0,1],[0,1],'--')
+    ax2.legend()
+    st.pyplot(fig2)
+
+    # -------- MLE --------
+    st.subheader("MLE")
+    n = len(y_true)
+    correct = (y_true == y_pred).sum()
+    p_hat = correct / n
+
+    st.write(f"Total: {n}")
+    st.write(f"Correct: {correct}")
+    st.success(f"MLE p̂ = {p_hat:.4f}")
+
+    # -------- HYPOTHESIS TEST --------
+    st.subheader("Hypothesis Test")
+
+    errors = (y_true != y_pred).sum()
+    e_hat = errors / n
     e0 = 0.5
 
-    z = (e_hat - e0) / np.sqrt((e0*(1-e0))/total)
+    z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
+    z_critical = norm.ppf(1-0.05/2)
+    p_value = 2*(1-norm.cdf(abs(z)))
 
-    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
-    st.write(f"Z = {z:.2f}")
+    st.write(f"Error rate: {e_hat:.4f}")
+    st.write(f"Z: {z:.2f}")
+    st.write(f"P-value: {p_value:.6f}")
 
-    if abs(z) > 1.96:
-        st.success("Model is significantly better than random")
+    if abs(z)>z_critical:
+        st.success("Reject H0 → Model better than random")
+    else:
+        st.warning("Fail to reject H0")
+
+    # -------- CLASS-WISE ACCURACY --------
+    st.subheader("Class-wise Accuracy")
+
+    real_acc = (real_df["prediction"]=="REAL").mean()
+    ai_acc = (ai_df["prediction"]=="AI").mean()
+
+    st.write(f"Real Accuracy: {real_acc*100:.2f}%")
+    st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
+
+    # -------- 2-PROPORTION TEST --------
+    st.subheader("Misclassification Comparison Test")
+
+    n_real = len(real_df)
+    n_ai = len(ai_df)
+
+    x_real = (real_df["prediction"]=="AI").sum()
+    x_ai = (ai_df["prediction"]=="REAL").sum()
+
+    p_real = x_real/n_real
+    p_ai = x_ai/n_ai
+
+    p_pool = (x_real+x_ai)/(n_real+n_ai)
+    SE = np.sqrt(p_pool*(1-p_pool)*(1/n_real + 1/n_ai))
+
+    Z = (p_ai - p_real)/SE
+    p_val = 2*(1-norm.cdf(abs(Z)))
+
+    st.write(f"Z = {Z:.3f}")
+    st.write(f"P-value = {p_val:.6f}")
+
+    if abs(Z) > 1.96:
+        st.success("Significant difference between AI & Real errors")
     else:
         st.warning("No significant difference")
