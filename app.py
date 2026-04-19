@@ -29,8 +29,22 @@ def preprocess_to_cifar(img):
     img = np.expand_dims(img, axis=0)
     return img
 
-# ---------------- UI ----------------
+# ---------------- UI CONFIG ----------------
 st.set_page_config(page_title="AI Detector", layout="wide")
+
+st.markdown("""
+<style>
+.metric-card {
+    background: linear-gradient(135deg, #00f5ff, #8b5cf6);
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    color: white;
+}
+.metric-title {font-size:16px;}
+.metric-value {font-size:26px; font-weight:bold;}
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown("<h1 style='text-align:center;'>👾 AI vs Real Image Detector</h1>", unsafe_allow_html=True)
 
@@ -59,10 +73,10 @@ with tab1:
 # =====================================================
 with tab2:
 
+    # -------- CONFUSION MATRIX --------
     TN, FP, FN, TP = 8568, 1432, 366, 9634
     total = TN + FP + FN + TP
 
-    # -------- METRICS --------
     accuracy = (TP + TN) / total
     precision = TP / (TP + FP)
     recall = TP / (TP + FN)
@@ -72,27 +86,18 @@ with tab2:
 
     st.subheader("📊 Performance Dashboard")
 
-    st.write(f"Accuracy = {accuracy:.4f}")
-    st.write(f"Precision = {precision:.4f}")
-    st.write(f"Recall = {recall:.4f}")
-    st.write(f"F1 Score = {f1:.4f}")
-    st.write(f"Specificity = {specificity:.4f}")
-    st.write(f"Error Rate = {error:.4f}")
+    def card(t,v):
+        return f"<div class='metric-card'><div>{t}</div><h2>{v}</h2></div>"
 
-    # -------- FORMULAS --------
-    st.subheader("📐 Metric Formulas")
+    c1,c2,c3 = st.columns(3)
+    c4,c5,c6 = st.columns(3)
 
-    st.latex(r"Accuracy = \frac{TP + TN}{TP + TN + FP + FN}")
-    st.latex(rf"= \frac{{{TP}+{TN}}}{{{total}}} = {accuracy:.4f}")
-
-    st.latex(r"Precision = \frac{TP}{TP + FP}")
-    st.latex(rf"= \frac{{{TP}}}{{{TP}+{FP}}} = {precision:.4f}")
-
-    st.latex(r"Recall = \frac{TP}{TP + FN}")
-    st.latex(rf"= \frac{{{TP}}}{{{TP}+{FN}}} = {recall:.4f}")
-
-    st.latex(r"F1 = \frac{2PR}{P+R}")
-    st.latex(rf"= {f1:.4f}")
+    c1.markdown(card("Accuracy",f"{accuracy:.4f}"),True)
+    c2.markdown(card("Precision",f"{precision:.4f}"),True)
+    c3.markdown(card("Recall",f"{recall:.4f}"),True)
+    c4.markdown(card("F1",f"{f1:.4f}"),True)
+    c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
+    c6.markdown(card("Error",f"{error:.4f}"),True)
 
     # -------- CONFUSION MATRIX --------
     st.subheader("Confusion Matrix")
@@ -120,7 +125,6 @@ with tab2:
 
     # -------- ROC --------
     st.subheader("ROC Curve")
-
     y_prob = df["probability"]
 
     fpr, tpr, _ = roc_curve(y_true, y_prob)
@@ -134,13 +138,13 @@ with tab2:
 
     # -------- MLE --------
     st.subheader("MLE")
-
     n = len(y_true)
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
 
-    st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
-    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}} = {p_hat:.4f}")
+    st.write(f"Total: {n}")
+    st.write(f"Correct: {correct}")
+    st.success(f"MLE p̂ = {p_hat:.4f}")
 
     # -------- HYPOTHESIS TEST --------
     st.subheader("Hypothesis Test")
@@ -153,11 +157,9 @@ with tab2:
     z_critical = norm.ppf(1-0.05/2)
     p_value = 2*(1-norm.cdf(abs(z)))
 
-    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
-    st.latex(rf"= \frac{{{e_hat:.4f}-0.5}}{{\sqrt{{\frac{{0.5(1-0.5)}}{{{n}}}}}}}")
-
-    st.write(f"Z = {z:.2f}")
-    st.write(f"P-value = {p_value:.6f}")
+    st.write(f"Error rate: {e_hat:.4f}")
+    st.write(f"Z: {z:.2f}")
+    st.write(f"P-value: {p_value:.6f}")
 
     if abs(z)>z_critical:
         st.success("Reject H0 → Model better than random")
@@ -170,11 +172,11 @@ with tab2:
     real_acc = (real_df["prediction"]=="REAL").mean()
     ai_acc = (ai_df["prediction"]=="AI").mean()
 
-    st.write(f"Real Accuracy = {real_acc*100:.2f}%")
-    st.write(f"AI Accuracy = {ai_acc*100:.2f}%")
+    st.write(f"Real Accuracy: {real_acc*100:.2f}%")
+    st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
 
     # -------- 2-PROPORTION TEST --------
-    st.subheader("Misclassification Comparison")
+    st.subheader("Misclassification Comparison Test")
 
     n_real = len(real_df)
     n_ai = len(ai_df)
@@ -191,11 +193,10 @@ with tab2:
     Z = (p_ai - p_real)/SE
     p_val = 2*(1-norm.cdf(abs(Z)))
 
-    st.latex(r"Z = \frac{p_1 - p_2}{SE}")
     st.write(f"Z = {Z:.3f}")
     st.write(f"P-value = {p_val:.6f}")
 
-    if abs(Z)>1.96:
+    if abs(Z) > 1.96:
         st.success("Significant difference between AI & Real errors")
     else:
         st.warning("No significant difference")
