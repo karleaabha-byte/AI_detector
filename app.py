@@ -34,15 +34,37 @@ st.set_page_config(page_title="AI Detector", layout="wide")
 
 st.markdown("""
 <style>
+body {
+    background-color: #0b1220;
+}
+
+/* Metric Cards */
 .metric-card {
-    background: linear-gradient(135deg, #00f5ff, #8b5cf6);
-    padding: 20px;
-    border-radius: 15px;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    padding: 18px;
+    border-radius: 12px;
     text-align: center;
     color: white;
+    box-shadow: 0px 4px 15px rgba(0, 0, 255, 0.3);
 }
-.metric-title {font-size:16px;}
-.metric-value {font-size:26px; font-weight:bold;}
+
+.metric-title {
+    font-size: 16px;
+    opacity: 0.85;
+}
+
+.metric-value {
+    font-size: 26px;
+    font-weight: bold;
+}
+
+/* Section headers */
+.section {
+    color: #3b82f6;
+    font-size: 22px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,10 +95,11 @@ with tab1:
 # =====================================================
 with tab2:
 
-    # -------- CONFUSION MATRIX --------
+    # -------- CONFUSION MATRIX VALUES --------
     TN, FP, FN, TP = 8568, 1432, 366, 9634
     total = TN + FP + FN + TP
 
+    # -------- METRICS --------
     accuracy = (TP + TN) / total
     precision = TP / (TP + FP)
     recall = TP / (TP + FN)
@@ -84,10 +107,10 @@ with tab2:
     specificity = TN / (TN + FP)
     error = (FP + FN) / total
 
-    st.subheader("📊 Performance Dashboard")
+    st.markdown("<div class='section'>📊 Performance Dashboard</div>", unsafe_allow_html=True)
 
     def card(t,v):
-        return f"<div class='metric-card'><div>{t}</div><h2>{v}</h2></div>"
+        return f"<div class='metric-card'><div class='metric-title'>{t}</div><div class='metric-value'>{v}</div></div>"
 
     c1,c2,c3 = st.columns(3)
     c4,c5,c6 = st.columns(3)
@@ -95,15 +118,33 @@ with tab2:
     c1.markdown(card("Accuracy",f"{accuracy:.4f}"),True)
     c2.markdown(card("Precision",f"{precision:.4f}"),True)
     c3.markdown(card("Recall",f"{recall:.4f}"),True)
-    c4.markdown(card("F1",f"{f1:.4f}"),True)
+    c4.markdown(card("F1 Score",f"{f1:.4f}"),True)
     c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
-    c6.markdown(card("Error",f"{error:.4f}"),True)
+    c6.markdown(card("Error Rate",f"{error:.4f}"),True)
 
     # -------- CONFUSION MATRIX --------
-    st.subheader("Confusion Matrix")
+    st.markdown("<div class='section'>Confusion Matrix</div>", unsafe_allow_html=True)
+
     cm = np.array([[TN, FP],[FN, TP]])
+
     fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', ax=ax)
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt='d',
+        cmap='Blues',
+        cbar=True,
+        linewidths=1,
+        linecolor='white',
+        xticklabels=["REAL","AI"],
+        yticklabels=["REAL","AI"],
+        ax=ax
+    )
+
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Confusion Matrix")
+
     st.pyplot(fig)
 
     # -------- LOAD CSV --------
@@ -120,34 +161,42 @@ with tab2:
     y_pred = df["pred"]
 
     # -------- CLASSIFICATION REPORT --------
-    st.subheader("Classification Report")
-    st.text(classification_report(y_true,y_pred,target_names=["REAL","AI"]))
+    st.markdown("<div class='section'>Classification Report</div>", unsafe_allow_html=True)
 
-    # -------- ROC --------
-    st.subheader("ROC Curve")
+    report_dict = classification_report(y_true, y_pred, target_names=["REAL","AI"], output_dict=True)
+    report_df = pd.DataFrame(report_dict).transpose()
+
+    st.dataframe(report_df.style.background_gradient(cmap="Blues"))
+
+    # -------- ROC CURVE --------
+    st.markdown("<div class='section'>ROC Curve</div>", unsafe_allow_html=True)
+
     y_prob = df["probability"]
-
     fpr, tpr, _ = roc_curve(y_true, y_prob)
     roc_auc = auc(fpr, tpr)
 
     fig2, ax2 = plt.subplots()
-    ax2.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}")
-    ax2.plot([0,1],[0,1],'--')
+    ax2.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}", color="#2563eb")
+    ax2.plot([0,1],[0,1],'--', color="gray")
+    ax2.set_xlabel("False Positive Rate")
+    ax2.set_ylabel("True Positive Rate")
+    ax2.set_title("ROC Curve")
     ax2.legend()
+
     st.pyplot(fig2)
 
     # -------- MLE --------
-    st.subheader("MLE")
+    st.markdown("<div class='section'>MLE (Maximum Likelihood Estimation)</div>", unsafe_allow_html=True)
+
     n = len(y_true)
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
 
-    st.write(f"Total: {n}")
-    st.write(f"Correct: {correct}")
-    st.success(f"MLE p̂ = {p_hat:.4f}")
+    st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
+    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}} = {p_hat:.4f}")
 
     # -------- HYPOTHESIS TEST --------
-    st.subheader("Hypothesis Test")
+    st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
 
     errors = (y_true != y_pred).sum()
     e_hat = errors / n
@@ -157,9 +206,9 @@ with tab2:
     z_critical = norm.ppf(1-0.05/2)
     p_value = 2*(1-norm.cdf(abs(z)))
 
-    st.write(f"Error rate: {e_hat:.4f}")
-    st.write(f"Z: {z:.2f}")
-    st.write(f"P-value: {p_value:.6f}")
+    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
+    st.write(f"Z = {z:.2f}")
+    st.write(f"P-value = {p_value:.6f}")
 
     if abs(z)>z_critical:
         st.success("Reject H0 → Model better than random")
@@ -167,7 +216,7 @@ with tab2:
         st.warning("Fail to reject H0")
 
     # -------- CLASS-WISE ACCURACY --------
-    st.subheader("Class-wise Accuracy")
+    st.markdown("<div class='section'>Class-wise Accuracy</div>", unsafe_allow_html=True)
 
     real_acc = (real_df["prediction"]=="REAL").mean()
     ai_acc = (ai_df["prediction"]=="AI").mean()
@@ -176,7 +225,7 @@ with tab2:
     st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
 
     # -------- 2-PROPORTION TEST --------
-    st.subheader("Misclassification Comparison Test")
+    st.markdown("<div class='section'>Misclassification Comparison Test</div>", unsafe_allow_html=True)
 
     n_real = len(real_df)
     n_ai = len(ai_df)
@@ -193,6 +242,7 @@ with tab2:
     Z = (p_ai - p_real)/SE
     p_val = 2*(1-norm.cdf(abs(Z)))
 
+    st.latex(r"Z = \frac{p_1 - p_2}{SE}")
     st.write(f"Z = {Z:.3f}")
     st.write(f"P-value = {p_val:.6f}")
 
