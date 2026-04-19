@@ -76,11 +76,11 @@ with tab1:
             st.metric("Confidence", f"{confidence:.4f}")
 
 # =====================================================
-# TAB 2 — MODEL STATISTICS WITH CALCULATIONS
+# TAB 2 — MODEL STATISTICS
 # =====================================================
 with tab2:
 
-    st.header("Model Evaluation (With Calculations)")
+    st.header("Model Evaluation")
 
     # ----------------------------
     # CONFUSION MATRIX (GIVEN)
@@ -112,19 +112,38 @@ with tab2:
     # ----------------------------
     # METRICS
     # ----------------------------
-    st.subheader("Metrics with Formula")
-
     total = TP + TN + FP + FN
 
     accuracy = (TP + TN) / total
     precision = TP / (TP + FP)
     recall = TP / (TP + FN)
     f1 = 2 * (precision * recall) / (precision + recall)
+    specificity = TN / (TN + FP)
+    error_rate = (FP + FN) / total
+
+    st.subheader("Final Metrics")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Accuracy", f"{accuracy:.4f}")
+    col2.metric("Precision", f"{precision:.4f}")
+    col3.metric("Recall", f"{recall:.4f}")
+
+    col4, col5, col6 = st.columns(3)
+    col4.metric("F1 Score", f"{f1:.4f}")
+    col5.metric("Specificity", f"{specificity:.4f}")
+    col6.metric("Error Rate", f"{error_rate:.4f}")
+
+    # ----------------------------
+    # FORMULAS + CALCULATIONS
+    # ----------------------------
+    st.subheader("Detailed Calculations")
 
     st.write(f"Accuracy = (TP + TN) / Total = ({TP} + {TN}) / {total} = {accuracy:.4f}")
     st.write(f"Precision = TP / (TP + FP) = {TP} / ({TP} + {FP}) = {precision:.4f}")
     st.write(f"Recall = TP / (TP + FN) = {TP} / ({TP} + {FN}) = {recall:.4f}")
     st.write(f"F1 Score = 2PR/(P+R) = {f1:.4f}")
+    st.write(f"Specificity = TN / (TN + FP) = {TN} / ({TN} + {FP}) = {specificity:.4f}")
+    st.write(f"Error Rate = (FP + FN) / Total = ({FP} + {FN}) / {total} = {error_rate:.4f}")
 
     # ----------------------------
     # MLE
@@ -132,17 +151,12 @@ with tab2:
     st.subheader("Maximum Likelihood Estimation (MLE)")
 
     correct = TP + TN
-    n = total
+    p_hat = correct / total
 
-    p_hat = correct / n
-
-    st.write("Formula:")
     st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
+    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{total}}}")
 
-    st.write("Substitution:")
-    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}}")
-
-    st.success(f"MLE Estimate of Accuracy = {p_hat:.4f}")
+    st.success(f"MLE Accuracy = {p_hat:.4f}")
 
     # ----------------------------
     # HYPOTHESIS TEST
@@ -150,26 +164,22 @@ with tab2:
     st.subheader("Hypothesis Testing")
 
     errors = FP + FN
-    e_hat = errors / n
-
+    e_hat = errors / total
     e0 = 0.5
 
-    z = (e_hat - e0) / np.sqrt((e0 * (1 - e0)) / n)
+    z = (e_hat - e0) / np.sqrt((e0 * (1 - e0)) / total)
 
     alpha = 0.05
     z_critical = norm.ppf(1 - alpha/2)
     p_value = 2 * (1 - norm.cdf(abs(z)))
 
-    st.write("Hypotheses:")
     st.latex(r"H_0: e = 0.5")
     st.latex(r"H_1: e \neq 0.5")
 
-    st.write("Z-test formula:")
     st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
 
-    st.write("Substitution:")
-    st.latex(rf"\hat{{e}} = \frac{{{errors}}}{{{n}}} = {e_hat:.4f}")
-    st.latex(rf"Z = \frac{{{e_hat:.4f} - 0.5}}{{\sqrt{{\frac{{0.5(1-0.5)}}{{{n}}}}}}}")
+    st.latex(rf"\hat{{e}} = \frac{{{errors}}}{{{total}}} = {e_hat:.4f}")
+    st.latex(rf"Z = \frac{{{e_hat:.4f} - 0.5}}{{\sqrt{{\frac{{0.5(1-0.5)}}{{{total}}}}}}}")
 
     st.write(f"Z = {z:.4f}")
     st.write(f"Z critical = ±{z_critical:.4f}")
@@ -181,4 +191,4 @@ with tab2:
         else:
             st.error("Reject H0 → Model is worse than random guessing")
     else:
-        st.warning("Fail to reject H0 → No significant difference")
+        st.warning("Fail to reject H0")
