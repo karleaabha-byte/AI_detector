@@ -6,3 +6,12 @@ rich
 pygments
 markdown-it-py
 mdurl
+streamlit
+numpy
+pandas
+matplotlib
+seaborn
+pillow
+tensorflow
+scikit-learn
+scipy
