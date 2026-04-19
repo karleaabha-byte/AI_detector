@@ -187,14 +187,18 @@ with tab2:
 
     # -------- MLE --------
     st.markdown("<div class='section'>MLE (Maximum Likelihood Estimation)</div>", unsafe_allow_html=True)
-
+    
     n = len(y_true)
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
-
+    
     st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
+    
+    st.markdown("### Final Calculation")
+    
     st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}} = {p_hat:.4f}")
-
+    
+    st.success(f"MLE Accuracy = {p_hat:.4f} ({p_hat*100:.2f}%)")
       # -------- HYPOTHESIS TEST --------
     st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
 
