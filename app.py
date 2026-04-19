@@ -185,86 +185,52 @@ with tab2:
 
     st.pyplot(fig2)
 
+
     # -------- MLE --------
-# -------- MLE --------
     st.markdown("<div class='section'>MLE (Maximum Likelihood Estimation)</div>", unsafe_allow_html=True)
     
     n = len(y_true)
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
     
-    col1, col2 = st.columns(2)
+    st.write(f"Total Samples: {n} | Correct: {correct}")
     
-    with col1:
-        st.markdown("### 📌 Values")
-        st.write(f"Total Samples: {n}")
-        st.write(f"Correct Predictions: {correct}")
+    st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
     
-    with col2:
-        st.markdown("### 📐 Formula")
-        st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
-    
-    st.markdown("### 🔢 Calculation")
     st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}}")
     
-    st.markdown("### ✅ Result")
     st.latex(rf"\hat{{p}} = {p_hat:.4f}")
     
-    st.success(f"Accuracy (MLE) = {p_hat*100:.2f}%")
-      # -------- HYPOTHESIS TEST --------
-# -------- HYPOTHESIS TEST --------
+    st.caption(f"Accuracy = {p_hat*100:.2f}%")
+        
+
+
+    # -------- HYPOTHESIS TEST --------
     st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
     
     errors = (y_true != y_pred).sum()
-    correct = n - errors
-    
     e_hat = errors / n
-    accuracy_hat = correct / n
     e0 = 0.5
     
     z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
     z_critical = norm.ppf(1-0.05/2)
     p_value = 2*(1-norm.cdf(abs(z)))
     
-    col1, col2 = st.columns(2)
+    st.write(f"Errors: {errors} | Error Rate: {e_hat:.4f}")
     
-    with col1:
-        st.markdown("### 📊 Observations")
-        st.write(f"Total Samples: {n}")
-        st.write(f"Correct: {correct}")
-        st.write(f"Errors: {errors}")
-        st.write(f"Error Rate: {e_hat:.4f}")
-        st.write(f"Accuracy: {accuracy_hat:.4f}")
+    st.latex(r"H_0: e = 0.5 \quad H_1: e \neq 0.5")
     
-    with col2:
-        st.markdown("### 📐 Test Formula")
-        st.latex(r"H_0: e = 0.5")
-        st.latex(r"H_1: e \neq 0.5")
-        st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
+    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
     
-    st.markdown("### 📈 Results")
-    st.write(f"Z Statistic: {z:.3f}")
-    st.write(f"Z Critical: ±{z_critical:.3f}")
-    st.write(f"P-value: {p_value:.6f}")
+    st.write(f"Z = {z:.3f}   |   p = {p_value:.6f}")
     
     if abs(z)>z_critical:
-        if z < 0:
-            st.success("Model is significantly BETTER than random")
-        else:
-            st.error("Model is WORSE than random")
+        st.success("Reject H0 → Model better than random")
     else:
-        st.warning("No significant difference from random")
-    # -------- CLASS-WISE ACCURACY --------
-    st.markdown("<div class='section'>Class-wise Accuracy</div>", unsafe_allow_html=True)
+        st.warning("Fail to reject H0") 
 
-    real_acc = (real_df["prediction"]=="REAL").mean()
-    ai_acc = (ai_df["prediction"]=="AI").mean()
-
-    st.write(f"Real Accuracy: {real_acc*100:.2f}%")
-    st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
 
     # -------- MISCLASSIFICATION TEST --------
-# -------- MISCLASSIFICATION TEST --------
     st.markdown("<div class='section'>Misclassification Comparison</div>", unsafe_allow_html=True)
     
     n_real = len(real_df)
@@ -284,28 +250,19 @@ with tab2:
     
     col1, col2 = st.columns(2)
     
-    with col1:
-        st.markdown("### 📊 Real Images")
-        st.write(f"Total: {n_real}")
-        st.write(f"Misclassified: {x_real}")
-        st.write(f"Error Rate: {p_real:.4f}")
+    col1.write(f"Real → AI: {x_real}/{n_real} ({p_real:.4f})")
+    col2.write(f"AI → Real: {x_ai}/{n_ai} ({p_ai:.4f})")
     
-    with col2:
-        st.markdown("### 🤖 AI Images")
-        st.write(f"Total: {n_ai}")
-        st.write(f"Misclassified: {x_ai}")
-        st.write(f"Error Rate: {p_ai:.4f}")
-    
-    st.markdown("### 📐 Test Formula")
-    st.latex(r"H_0: p_{real} = p_{ai}")
-    st.latex(r"H_1: p_{real} \neq p_{ai}")
     st.latex(r"Z = \frac{p_{ai} - p_{real}}{SE}")
     
-    st.markdown("### 📈 Results")
-    st.write(f"Z Statistic: {Z:.3f}")
-    st.write(f"P-value: {p_val:.6f}")
+    st.write(f"Z = {Z:.3f}   |   p = {p_val:.6f}")
     
     if abs(Z) > 1.96:
-        st.success("Significant difference between AI & Real errors")
+        st.success("Significant difference")
     else:
         st.warning("No significant difference")
+    
+    
+    
+    
+        
