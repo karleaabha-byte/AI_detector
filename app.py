@@ -63,7 +63,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("✨ AI vs Real Image Detector")
+st.title("🤖 AI vs Real Image Detector")
 
 tab1, tab2 = st.tabs(["Prediction", "Model Statistics"])
 
