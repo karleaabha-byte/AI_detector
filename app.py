@@ -192,13 +192,16 @@ with tab2:
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
     
-    st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
+    # Step 1: Formula
+    st.latex(r"\hat{p} = \frac{\text{correct predictions}}{\text{total samples}}")
     
-    st.markdown("### Final Calculation")
+    # Step 2: Substitute values
+    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}}")
     
-    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}} = {p_hat:.4f}")
+    # Step 3: Final result
+    st.latex(rf"\hat{{p}} = {p_hat:.4f}")
     
-    st.success(f"MLE Accuracy = {p_hat:.4f} ({p_hat*100:.2f}%)")
+    st.success(f"Final MLE Accuracy = {p_hat:.4f} ({p_hat*100:.2f}%)")
       # -------- HYPOTHESIS TEST --------
     st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
 
