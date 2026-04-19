@@ -1,14 +1,10 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from tensorflow.keras.models import load_model
 from PIL import Image
-
-from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, accuracy_score
-from sklearn.metrics import classification_report, roc_curve, auc
 from scipy.stats import norm
 
 # ------------------------
@@ -22,7 +18,7 @@ model = load_cnn()
 IMG_SIZE = (32, 32)
 
 # ------------------------
-# PREPROCESS
+# PREPROCESS FUNCTION
 # ------------------------
 def preprocess_to_cifar(img):
     img = img.convert("RGB")
@@ -49,7 +45,7 @@ st.title("AI vs Real Image Detector")
 tab1, tab2 = st.tabs(["Prediction", "Model Statistics"])
 
 # =====================================================
-# TAB 1 — PREDICTION
+# TAB 1 — IMAGE PREDICTION
 # =====================================================
 with tab1:
 
@@ -80,111 +76,109 @@ with tab1:
             st.metric("Confidence", f"{confidence:.4f}")
 
 # =====================================================
-# TAB 2 — STATISTICS
+# TAB 2 — MODEL STATISTICS WITH CALCULATIONS
 # =====================================================
 with tab2:
 
-    st.header("Model Evaluation")
+    st.header("Model Evaluation (With Calculations)")
 
-    # LOAD CSV
-    real_df = pd.read_csv("predictions_real.csv")
-    ai_df = pd.read_csv("predictions_ai.csv")
+    # ----------------------------
+    # CONFUSION MATRIX (GIVEN)
+    # ----------------------------
+    TN = 8568
+    FP = 1432
+    FN = 366
+    TP = 9634
 
-    real_df["true_label"] = 0
-    ai_df["true_label"] = 1
+    cm = np.array([[TN, FP],
+                   [FN, TP]])
 
-    df = pd.concat([real_df, ai_df], ignore_index=True)
-
-    df["prediction"] = df["prediction"].map({
-        "REAL":0,
-        "AI":1
-    })
-
-    y_true = df["true_label"]
-    y_pred = df["prediction"]
-
-    # ---------------- METRICS ----------------
-    accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred)
-    recall = recall_score(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred)
-
-    col1,col2,col3,col4 = st.columns(4)
-
-    col1.metric("Accuracy", round(accuracy,3))
-    col2.metric("Precision", round(precision,3))
-    col3.metric("Recall", round(recall,3))
-    col4.metric("F1 Score", round(f1,3))
-
-    # ---------------- CONFUSION MATRIX ----------------
     st.subheader("Confusion Matrix")
 
-    cm = confusion_matrix(y_true,y_pred)
-
     fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+    sns.heatmap(cm,
+                annot=True,
+                fmt='d',
+                cmap='Blues',
                 xticklabels=["REAL","AI"],
-                yticklabels=["REAL","AI"], ax=ax)
+                yticklabels=["REAL","AI"],
+                ax=ax)
 
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
 
     st.pyplot(fig)
 
-    # ---------------- MLE ----------------
-    st.subheader("Maximum Likelihood Estimation")
+    # ----------------------------
+    # METRICS
+    # ----------------------------
+    st.subheader("Metrics with Formula")
 
-    n = len(y_true)
-    correct = (y_true == y_pred).sum()
+    total = TP + TN + FP + FN
+
+    accuracy = (TP + TN) / total
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    f1 = 2 * (precision * recall) / (precision + recall)
+
+    st.write(f"Accuracy = (TP + TN) / Total = ({TP} + {TN}) / {total} = {accuracy:.4f}")
+    st.write(f"Precision = TP / (TP + FP) = {TP} / ({TP} + {FP}) = {precision:.4f}")
+    st.write(f"Recall = TP / (TP + FN) = {TP} / ({TP} + {FN}) = {recall:.4f}")
+    st.write(f"F1 Score = 2PR/(P+R) = {f1:.4f}")
+
+    # ----------------------------
+    # MLE
+    # ----------------------------
+    st.subheader("Maximum Likelihood Estimation (MLE)")
+
+    correct = TP + TN
+    n = total
+
     p_hat = correct / n
 
-    st.write("Total Samples:", n)
-    st.write("Correct Predictions:", correct)
-    st.success(f"MLE Accuracy = {p_hat:.4f}")
+    st.write("Formula:")
+    st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
 
-    # ---------------- HYPOTHESIS TEST ----------------
+    st.write("Substitution:")
+    st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}}")
+
+    st.success(f"MLE Estimate of Accuracy = {p_hat:.4f}")
+
+    # ----------------------------
+    # HYPOTHESIS TEST
+    # ----------------------------
     st.subheader("Hypothesis Testing")
 
-    errors = (y_true != y_pred).sum()
+    errors = FP + FN
     e_hat = errors / n
 
     e0 = 0.5
-    z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
+
+    z = (e_hat - e0) / np.sqrt((e0 * (1 - e0)) / n)
 
     alpha = 0.05
-    z_critical = norm.ppf(1-alpha/2)
-    p_value = 2*(1-norm.cdf(abs(z)))
+    z_critical = norm.ppf(1 - alpha/2)
+    p_value = 2 * (1 - norm.cdf(abs(z)))
 
-    st.write("Error Rate:", e_hat)
-    st.write("Z:", z)
-    st.write("P-value:", p_value)
+    st.write("Hypotheses:")
+    st.latex(r"H_0: e = 0.5")
+    st.latex(r"H_1: e \neq 0.5")
+
+    st.write("Z-test formula:")
+    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
+
+    st.write("Substitution:")
+    st.latex(rf"\hat{{e}} = \frac{{{errors}}}{{{n}}} = {e_hat:.4f}")
+    st.latex(rf"Z = \frac{{{e_hat:.4f} - 0.5}}{{\sqrt{{\frac{{0.5(1-0.5)}}{{{n}}}}}}}")
+
+    st.write(f"Z = {z:.4f}")
+    st.write(f"Z critical = ±{z_critical:.4f}")
+    st.write(f"P-value = {p_value:.6f}")
 
     if abs(z) > z_critical:
         if z < 0:
-            st.success("Model significantly better than random")
+            st.success("Reject H0 → Model is significantly better than random guessing")
         else:
-            st.error("Model worse than random")
+            st.error("Reject H0 → Model is worse than random guessing")
     else:
-        st.warning("No significant difference")
-
-    # ---------------- CLASSIFICATION REPORT ----------------
-    st.subheader("Classification Report")
-    st.text(classification_report(y_true,y_pred, target_names=["REAL","AI"]))
-
-    # ---------------- ROC ----------------
-    st.subheader("ROC Curve")
-
-    y_prob = df["probability"]
-
-    fpr, tpr, _ = roc_curve(y_true, y_prob)
-    roc_auc = auc(fpr,tpr)
-
-    fig2, ax2 = plt.subplots()
-    ax2.plot(fpr,tpr,label=f"AUC = {roc_auc:.3f}")
-    ax2.plot([0,1],[0,1],'--')
-
-    ax2.set_xlabel("FPR")
-    ax2.set_ylabel("TPR")
-    ax2.legend()
-
-    st.pyplot(fig2)
+        st.warning("Fail to reject H0 → No significant difference")
