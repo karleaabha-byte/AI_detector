@@ -34,36 +34,40 @@ st.set_page_config(page_title="AI Detector", layout="wide")
 
 st.markdown("""
 <style>
-body {
-    background-color: #0b1220;
-}
+body {background-color:#0b1220;}
 
-/* Metric Cards */
 .metric-card {
     background: linear-gradient(135deg, #1e3a8a, #2563eb);
     padding: 18px;
     border-radius: 12px;
     text-align: center;
     color: white;
-    box-shadow: 0px 4px 15px rgba(0, 0, 255, 0.3);
+    box-shadow: 0px 4px 15px rgba(0,0,255,0.3);
 }
 
-.metric-title {
-    font-size: 16px;
-    opacity: 0.85;
-}
+.metric-title {font-size:16px;}
+.metric-value {font-size:26px; font-weight:bold;}
 
-.metric-value {
-    font-size: 26px;
-    font-weight: bold;
-}
-
-/* Section headers */
 .section {
-    color: #3b82f6;
-    font-size: 22px;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    color:#3b82f6;
+    font-size:22px;
+    margin-top:20px;
+}
+
+.formula-box {
+    background:#111827;
+    padding:20px;
+    border-radius:12px;
+    text-align:center;
+    margin:15px 0;
+}
+
+.info-box {
+    background:#0f172a;
+    padding:12px;
+    border-left:4px solid #3b82f6;
+    border-radius:8px;
+    margin-bottom:10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -72,9 +76,7 @@ st.markdown("<h1 style='text-align:center;'>👾 AI vs Real Image Detector</h1>"
 
 tab1, tab2 = st.tabs(["Prediction", "Model Statistics"])
 
-# =====================================================
-# TAB 1
-# =====================================================
+# ================= TAB 1 =================
 with tab1:
     file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
     if file:
@@ -90,61 +92,34 @@ with tab1:
         st.metric("Prediction", label)
         st.metric("Confidence", f"{conf:.4f}")
 
-# =====================================================
-# TAB 2
-# =====================================================
+# ================= TAB 2 =================
 with tab2:
 
-    # -------- CONFUSION MATRIX VALUES --------
     TN, FP, FN, TP = 8568, 1432, 366, 9634
     total = TN + FP + FN + TP
 
-    # -------- METRICS --------
     accuracy = (TP + TN) / total
     precision = TP / (TP + FP)
     recall = TP / (TP + FN)
     f1 = 2 * precision * recall / (precision + recall)
-    specificity = TN / (TN + FP)
-    error = (FP + FN) / total
 
-    st.markdown("<div class='section'>📊 Performance Dashboard</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section'>📊 Performance Dashboard</div>", True)
 
     def card(t,v):
         return f"<div class='metric-card'><div class='metric-title'>{t}</div><div class='metric-value'>{v}</div></div>"
 
-    c1,c2,c3 = st.columns(3)
-    c4,c5,c6 = st.columns(3)
-
+    c1,c2,c3,c4 = st.columns(4)
     c1.markdown(card("Accuracy",f"{accuracy:.4f}"),True)
     c2.markdown(card("Precision",f"{precision:.4f}"),True)
     c3.markdown(card("Recall",f"{recall:.4f}"),True)
     c4.markdown(card("F1 Score",f"{f1:.4f}"),True)
-    c5.markdown(card("Specificity",f"{specificity:.4f}"),True)
-    c6.markdown(card("Error Rate",f"{error:.4f}"),True)
 
     # -------- CONFUSION MATRIX --------
-    st.markdown("<div class='section'>Confusion Matrix</div>", unsafe_allow_html=True)
-
+    st.markdown("<div class='section'>Confusion Matrix</div>", True)
     cm = np.array([[TN, FP],[FN, TP]])
 
     fig, ax = plt.subplots()
-    sns.heatmap(
-        cm,
-        annot=True,
-        fmt='d',
-        cmap='Blues',
-        cbar=True,
-        linewidths=1,
-        linecolor='white',
-        xticklabels=["REAL","AI"],
-        yticklabels=["REAL","AI"],
-        ax=ax
-    )
-
-    ax.set_xlabel("Predicted")
-    ax.set_ylabel("Actual")
-    ax.set_title("Confusion Matrix")
-
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
     st.pyplot(fig)
 
     # -------- LOAD CSV --------
@@ -161,138 +136,75 @@ with tab2:
     y_pred = df["pred"]
 
     # -------- CLASSIFICATION REPORT --------
-    st.markdown("<div class='section'>Classification Report</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section'>Classification Report</div>", True)
+    report = pd.DataFrame(classification_report(y_true,y_pred,output_dict=True)).transpose()
+    st.dataframe(report.style.background_gradient(cmap="Blues"))
 
-    report_dict = classification_report(y_true, y_pred, target_names=["REAL","AI"], output_dict=True)
-    report_df = pd.DataFrame(report_dict).transpose()
-
-    st.dataframe(report_df.style.background_gradient(cmap="Blues"))
-
-    # -------- ROC CURVE --------
-    st.markdown("<div class='section'>ROC Curve</div>", unsafe_allow_html=True)
-
+    # -------- ROC --------
+    st.markdown("<div class='section'>ROC Curve</div>", True)
     y_prob = df["probability"]
+
     fpr, tpr, _ = roc_curve(y_true, y_prob)
-    roc_auc = auc(fpr, tpr)
+    roc_auc = auc(fpr,tpr)
 
     fig2, ax2 = plt.subplots()
-    ax2.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}", color="#2563eb")
-    ax2.plot([0,1],[0,1],'--', color="gray")
-    ax2.set_xlabel("False Positive Rate")
-    ax2.set_ylabel("True Positive Rate")
-    ax2.set_title("ROC Curve")
+    ax2.plot(fpr,tpr,label=f"AUC={roc_auc:.3f}")
+    ax2.plot([0,1],[0,1],'--')
     ax2.legend()
-
     st.pyplot(fig2)
 
     # -------- MLE --------
-    st.markdown("<div class='section'>MLE (Maximum Likelihood Estimation)</div>", unsafe_allow_html=True)
-    
+    st.markdown("<div class='section'>MLE</div>", True)
+
     n = len(y_true)
     correct = (y_true == y_pred).sum()
     p_hat = correct / n
-    
+
+    st.markdown("<div class='info-box'>Estimate of accuracy using MLE</div>", True)
+
+    st.markdown("<div class='formula-box'>", True)
     st.latex(r"\hat{p} = \frac{\text{correct}}{n}")
-    
-    st.markdown("### Final Calculation")
-    
     st.latex(rf"\hat{{p}} = \frac{{{correct}}}{{{n}}} = {p_hat:.4f}")
-    
-    st.success(f"MLE Accuracy = {p_hat:.4f} ({p_hat*100:.2f}%)")
-      # -------- HYPOTHESIS TEST --------
-    st.markdown("<div class='section'>Hypothesis Testing</div>", unsafe_allow_html=True)
+    st.markdown("</div>", True)
 
-    # counts
-    n = len(y_true)
+    # -------- HYPOTHESIS --------
+    st.markdown("<div class='section'>Hypothesis Test</div>", True)
+
     errors = (y_true != y_pred).sum()
-    correct = n - errors
-
-    # rates
     e_hat = errors / n
-    accuracy_hat = correct / n
-    e0 = 0.5
 
-    # z test
-    z = (e_hat - e0) / np.sqrt((e0*(1-e0))/n)
-    z_critical = norm.ppf(1-0.05/2)
-    p_value = 2*(1-norm.cdf(abs(z)))
+    z = (e_hat-0.5)/np.sqrt((0.5*0.5)/n)
+    p_val = 2*(1-norm.cdf(abs(z)))
 
-    # display
-    st.write(f"Total Samples: {n}")
-    st.write(f"Correct Predictions: {correct}")
-    st.write(f"Misclassified Samples: {errors}")
+    st.markdown("<div class='formula-box'>", True)
+    st.latex(r"H_0: e=0.5 \quad H_1:e\neq0.5")
+    st.latex(rf"Z = {z:.3f}")
+    st.markdown("</div>", True)
 
-    st.write(f"Observed Error Rate (ê): {e_hat:.4f} ({e_hat*100:.2f}%)")
-    st.write(f"Observed Accuracy: {accuracy_hat:.4f} ({accuracy_hat*100:.2f}%)")
+    st.write(f"Error Rate: {e_hat*100:.2f}%")
+    st.write(f"P-value: {p_val:.6f}")
 
-    st.latex(r"H_0: e = 0.5 \quad vs \quad H_1: e \neq 0.5")
-    st.latex(r"Z = \frac{\hat{e} - e_0}{\sqrt{\frac{e_0(1-e_0)}{n}}}")
+    # -------- MISCLASSIFICATION --------
+    st.markdown("<div class='section'>Misclassification Test</div>", True)
 
-    st.write(f"Z Statistic: {z:.3f}")
-    st.write(f"Z Critical: ±{z_critical:.3f}")
-    st.write(f"P-value: {p_value:.6f}")
-
-    if abs(z)>z_critical:
-        if z < 0:
-            st.success("Reject H0 → Model error is significantly LOWER than random guessing")
-        else:
-            st.error("Reject H0 → Model error is WORSE than random guessing")
-    else:
-        st.warning("Fail to reject H0 → No significant difference")
-
-    # -------- CLASS-WISE ACCURACY --------
-    st.markdown("<div class='section'>Class-wise Accuracy</div>", unsafe_allow_html=True)
-
-    real_acc = (real_df["prediction"]=="REAL").mean()
-    ai_acc = (ai_df["prediction"]=="AI").mean()
-
-    st.write(f"Real Accuracy: {real_acc*100:.2f}%")
-    st.write(f"AI Accuracy: {ai_acc*100:.2f}%")
-
-    # -------- MISCLASSIFICATION TEST --------
-    st.markdown("<div class='section'>Misclassification Comparison Test</div>", unsafe_allow_html=True)
-
-    # sizes
     n_real = len(real_df)
     n_ai = len(ai_df)
 
-    # misclassified counts
     x_real = (real_df["prediction"]=="AI").sum()
     x_ai = (ai_df["prediction"]=="REAL").sum()
 
-    # rates
-    p_real = x_real / n_real
-    p_ai = x_ai / n_ai
+    p_real = x_real/n_real
+    p_ai = x_ai/n_ai
 
-    # pooled
-    p_pool = (x_real + x_ai) / (n_real + n_ai)
-    SE = np.sqrt(p_pool*(1-p_pool)*(1/n_real + 1/n_ai))
+    p_pool = (x_real+x_ai)/(n_real+n_ai)
+    SE = np.sqrt(p_pool*(1-p_pool)*(1/n_real+1/n_ai))
 
-    Z = (p_ai - p_real)/SE
+    Z = (p_ai-p_real)/SE
     p_val = 2*(1-norm.cdf(abs(Z)))
 
-    # display counts
-    st.write("🔹 Real Images:")
-    st.write(f"Total Real Images: {n_real}")
-    st.write(f"Misclassified as AI: {x_real}")
+    st.markdown("<div class='formula-box'>", True)
+    st.latex(rf"Z = {Z:.3f}")
+    st.markdown("</div>", True)
 
-    st.write("🔹 AI Images:")
-    st.write(f"Total AI Images: {n_ai}")
-    st.write(f"Misclassified as Real: {x_ai}")
-
-    # display rates
-    st.write(f"Real Misclassification Rate: {p_real:.4f} ({p_real*100:.2f}%)")
-    st.write(f"AI Misclassification Rate: {p_ai:.4f} ({p_ai*100:.2f}%)")
-
-    # stats
-    st.latex(r"H_0: p_{real} = p_{ai}")
-    st.latex(r"H_1: p_{real} \neq p_{ai}")
-    st.latex(r"Z = \frac{p_{ai} - p_{real}}{SE}")
-
-    st.write(f"Z Statistic: {Z:.3f}")
-    st.write(f"P-value: {p_val:.6f}")
-
-    if abs(Z) > 1.96:
-        st.success("Reject H0 → Significant difference in misclassification rates")
-    else:
-        st.warning("Fail to reject H0 → No significant difference")
+    st.write(f"Real Misclassification: {p_real*100:.2f}%")
+    st.write(f"AI Misclassification: {p_ai*100:.2f}%")
